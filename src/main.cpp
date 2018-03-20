@@ -18,15 +18,71 @@ void preprocess(InputArray in, OutputArray out) {
     threshold(out, out, thresh, 255, THRESH_BINARY);
 }
 
+typedef struct _BoundingBox {
+    Point max = Point(INT_MIN, INT_MIN);;
+    Point min = Point(INT_MAX, INT_MAX);
+} BoundingBox;
+
+BoundingBox getBoundingBox(const vector<Point> box) {
+    BoundingBox boundingBox;
+    for(Point point: box) {
+        if(point.x < boundingBox.min.x) {
+            boundingBox.min.x = point.x;
+        }
+        if(point.y < boundingBox.min.y) {
+            boundingBox.min.y = point.y;
+        }
+        if(point.x > boundingBox.max.x) {
+            boundingBox.max.x = point.x;
+        }
+        if(point.y > boundingBox.max.y) {
+            boundingBox.max.y = point.y;
+        }
+    }
+
+    return boundingBox;
+}
+
+bool lessThan(Point point1, Point point2) {
+    return point1.x < point2.x && point1.y < point2.y;
+}
+
+bool greaterThan(Point point1, Point point2) {
+    return point1.x > point2.x && point1.y > point2.y;
+}
+
+bool containsBox(const vector<Point>& box1, const vector<Point>& box2) {
+    BoundingBox boundingBox1 = getBoundingBox(box1);
+    BoundingBox boundingBox2 = getBoundingBox(box2);
+
+    return lessThan(boundingBox1.min, boundingBox2.min) && greaterThan(boundingBox1.max, boundingBox2.max);
+}
+
 vector<vector<Point>> get_boxes(const vector<vector<Point>> &contours) {
-    vector<vector<Point>> result;
-    vector<Point> contour1;
-    contour1.push_back(Point(350, 150));
-    contour1.push_back(Point(350, 200));
-    contour1.push_back(Point(200, 200));
-    contour1.push_back(Point(200, 150));
-    result.push_back(contour1);
-    return result;
+    vector<vector<Point>> boxes;
+
+    for(const vector<Point>& contour: contours) {
+        vector<Point> poly;
+        approxPolyDP(contour, poly, 50, true);
+        if (poly.size() == 4) {
+            boxes.push_back(poly);
+        }
+    }
+
+    vector<vector<Point>> filteredBoxes;
+    for(const vector<Point> box: boxes) {
+        bool containsOtherBox = false;
+        for(const vector<Point> otherBox: boxes) {
+            if(containsBox(box, otherBox)) {
+                containsOtherBox = true;
+            }
+        }
+        if (!containsOtherBox) {
+            filteredBoxes.push_back(box);
+        }
+    }
+
+    return filteredBoxes;
 }
 
 typedef struct _arrowData {
@@ -83,6 +139,16 @@ arrow approximate_arrow(const arrowData &data) {
     return {p2, p1};
 }
 
+void printContour(const vector<vector<Point>>& contours) {
+    for(const vector<Point>& contour: contours) {
+        cout<<"begin contour"<<endl;
+        for(const Point& point: contour) {
+            cout<<point<< endl;
+        }
+        cout<<"end contour"<<endl;
+    }
+}
+
 int main( int, char** argv )
 {
     Mat src = imread(argv[1]);
@@ -104,23 +170,10 @@ int main( int, char** argv )
     namedWindow( "Contour", WINDOW_AUTOSIZE );
     imshow( "Contour", contour_drawing );
 
-    vector<vector<Point>> polygons;
-    for(const vector<Point>& contour: contours) {
-        vector<Point> poly;
-        approxPolyDP(contour, poly, 50, true);
-        if (poly.size() == 2) {
-            arrow result = approximate_arrow({poly, contour});
-            cout<<result.start<<endl;
-            cout<<result.end<<endl;
-        }
-        polygons.push_back(poly);
-    }
 
-    Mat poly_drawing;
-    draw_contour(polygons, contour_drawing.size(), poly_drawing);
+    vector<vector<Point>> boxes = get_boxes(contours);
 
-    namedWindow( "Poly", WINDOW_AUTOSIZE );
-    imshow( "Poly", poly_drawing );
+    printContour(boxes);
 
     waitKey(0);
     return(0);
