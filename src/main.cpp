@@ -6,46 +6,56 @@
 #include <stdlib.h>
 using namespace cv;
 using namespace std;
-Mat src; Mat src_gray;
-int thresh = 100;
-int max_thresh = 255;
+
 RNG rng(12345);
-void thresh_callback(int, void* );
+vector<vector<Point>> recognise_shape(InputArray in, OutputArray drawing);
+
+void preprocess(InputArray in, OutputArray out) {
+    const int thresh = 150;
+    cvtColor(in, out, COLOR_BGR2GRAY);
+    blur(out, out, Size(3,3));
+    threshold(out, out, thresh, 255, THRESH_BINARY);
+}
+
 int main( int, char** argv )
 {
-    src = imread(argv[1]);
+    Mat src = imread(argv[1]);
     if (src.empty())
     {
         cerr << "No image supplied ..." << endl;
         return -1;
     }
 
-    cvtColor( src, src_gray, COLOR_BGR2GRAY );
-    blur( src_gray, src_gray, Size(3,3) );
+    Mat preprocessed;
+    preprocess(src, preprocessed);
 
     const char* source_window = "Source";
     namedWindow( source_window, WINDOW_AUTOSIZE );
-    imshow( source_window, src_gray );
-    createTrackbar( " Canny thresh:", "Source", &thresh, max_thresh, thresh_callback );
+    imshow( source_window, preprocessed );
 
-    thresh_callback( 0, 0 );
+    Mat drawing;
+    vector<vector<Point>> shape = recognise_shape(preprocessed, drawing);
+
+    namedWindow( "Drawing", WINDOW_AUTOSIZE );
+    imshow( "Drawing", drawing );
 
     waitKey(0);
     return(0);
 }
-void thresh_callback(int, void* )
+
+vector<vector<Point>> recognise_shape(InputArray in, OutputArray out)
 {
-    Mat img_threshold;
-    vector<vector<Point> > contours;
     vector<Vec4i> hierarchy;
-    threshold(src_gray, img_threshold, thresh, 255, THRESH_BINARY);
-    findContours( img_threshold, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE, Point(0, 0) );
-    Mat drawing = Mat::zeros( img_threshold.size(), CV_8UC3 );
+    vector<vector<Point>> contours;
+    findContours(in.getMat(), contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE, Point(0, 0));
+
+    Mat drawing = Mat::zeros( in.size(), CV_8UC3 );
     for( size_t i = 0; i< contours.size(); i++ )
     {
         Scalar color = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
         drawContours( drawing, contours, (int)i, color, 2, 8, hierarchy, 0, Point() );
     }
-    namedWindow( "Contours", WINDOW_AUTOSIZE );
-    imshow( "Contours", drawing );
+    out.assign(drawing);
+
+    return contours;
 }
