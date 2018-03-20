@@ -7,15 +7,30 @@
 using namespace cv;
 using namespace std;
 
+
 typedef struct _arrow {
     Point start;
     Point end;
 } arrow;
 
+typedef struct _link {
+    vector<Point> boxStart;
+    vector<Point> boxEnd;
+    arrow linkBetween;
+} link;
+
+template <typename T>
+std::ostream& operator<<(std::ostream& os, const vector<T> &t);
+
+std::ostream& operator<<(std::ostream& os, const link &l);
+
+std::ostream& operator<<(std::ostream& os, const arrow &a);
+
 RNG rng(12345);
 vector<vector<Point>> recognise_shape(InputArray in, OutputArray drawing);
 void draw_contour(const vector<vector<Point>> &contours, Size size, OutputArray out);
 void draw_arrow_heads(const vector<arrow> &arrows, Size size, InputOutputArray canvas);
+void drawLinks(const vector<link> &links, InputOutputArray canvas);
 
 void preprocess(InputArray in, OutputArray out) {
     const int thresh = 150;
@@ -176,6 +191,64 @@ void printArrows(const vector<arrowData>& arrows) {
     }
 }
 
+template <typename T>
+std::ostream& operator<<(std::ostream& os, const vector<T> &t)
+    {
+        for(const T &e: t) {
+            os << e << endl;
+        }
+        os << endl;
+        return os;
+    }
+
+std::ostream& operator<<(std::ostream& os, const link &l)
+    {
+        os << "Link:" << endl << "StartBox: " << endl << l.boxStart << endl;
+        os <<  "EndBox:" << endl << l.boxEnd << endl;
+        os << "Arrow: " << endl << l.linkBetween << endl;
+        return os;
+    }
+
+std::ostream& operator<<(std::ostream& os, const arrow &a)
+    {
+        os <<  "Start:" << endl << a.start << endl;
+        os << "End: " << endl << a.end << endl;
+        return os;
+    }
+
+
+vector<Point> findClosestBox(const vector<vector<Point>> &boxes, Point point) {
+    vector<Point> closestBox = boxes.front();
+    int minDist = INT_MAX;
+    for(const vector<Point> &box: boxes) {
+        cout << minDist << " ";
+        for(const Point &boxPoint: box) {
+            if (dist(boxPoint, point) < minDist) {
+                minDist = dist(boxPoint, point);
+                closestBox = box;
+            }
+            cout << minDist << " ";
+        }
+        cout << endl;
+    }
+
+    return closestBox;
+}
+
+vector<link> getLinks(const vector<vector<Point>> &boxes, const vector<arrow> &arrows) {
+    vector<link> links;
+    cout << "Boxes " << boxes << endl;
+    cout << "Arrows " << arrows << endl;
+    for(const arrow &nextArrow: arrows) {
+        link newLink;
+        newLink.boxStart = findClosestBox(boxes, nextArrow.start);
+        newLink.boxEnd = findClosestBox(boxes, nextArrow.end);
+        newLink.linkBetween = nextArrow;
+        links.push_back(newLink);
+    }
+    return links;
+}
+
 int main( int, char** argv )
 {
     Mat src = imread(argv[1]);
@@ -203,13 +276,15 @@ int main( int, char** argv )
         arrows.push_back(approximate_arrow(elm));
     }
 
-    draw_arrow_heads(arrows, contour_drawing.size(), contour_drawing);
+    vector<link> links = getLinks(boxes, arrows);
+    drawLinks(links, contour_drawing);
 
     namedWindow( "Contour", WINDOW_AUTOSIZE );
     imshow( "Contour", contour_drawing );
 
   //  printContour(boxes);
   //  printArrows(arrowDataVector);
+    cout << links << endl;
 
     waitKey(0);
     return(0);
@@ -229,8 +304,27 @@ void draw_arrow_heads(const vector<arrow> &arrows, Size size, InputOutputArray c
    for (const arrow& arrow: arrows)
        {
            Scalar color = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
-           circle(canvas, arrow.end, 5, color, 3, 0, 0);
+           circle(canvas, arrow.end, 10, color, 3, 0, 0);
+           circle(canvas, arrow.start, 5, color, 3, 0, 0);
        }
+}
+
+void drawLinks(const vector<link> &links, InputOutputArray canvas) {
+   for(const link &l: links) {
+        Scalar color = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
+        vector<vector<Point>> contours;
+        contours.push_back(l.boxStart);
+
+        drawContours(canvas, contours, -1, color, 2, 8);
+
+       contours.pop_back();
+       contours.push_back(l.boxEnd);
+
+       drawContours(canvas, contours, -1, color, 8, 8);
+
+        circle(canvas, l.linkBetween.end, 10, color, 8, 0, 0);
+        circle(canvas, l.linkBetween.start, 5, color, 3, 0, 0);
+   }
 }
 
 vector<vector<Point>> recognise_shape(InputArray in, OutputArray out)
