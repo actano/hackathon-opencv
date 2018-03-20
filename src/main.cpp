@@ -34,26 +34,20 @@ int main( int, char** argv )
     namedWindow( source_window, WINDOW_AUTOSIZE );
     imshow( source_window, preprocessed );
 
-    Mat drawing;
-    vector<vector<Point>> contours = recognise_shape(preprocessed, drawing);
-
-    namedWindow( "Drawing", WINDOW_AUTOSIZE );
-    imshow( "Drawing", drawing );
+    Mat contour_drawing;
+    vector<vector<Point>> contours = recognise_shape(preprocessed, contour_drawing);
+    namedWindow( "Contour", WINDOW_AUTOSIZE );
+    imshow( "Contour", contour_drawing );
 
     vector<vector<Point>> polygons;
     for(const vector<Point>& contour: contours) {
-        cout<<"Begin Poly"<<endl;
         vector<Point> poly;
         approxPolyDP(contour, poly, 50, true);
         polygons.push_back(poly);
-        for(const Point& point: poly) {
-            cout<<point<<endl;
-        }
-        cout<<"End Poly"<<endl;
     }
 
     Mat poly_drawing;
-    draw_contour(polygons, drawing.size(), poly_drawing);
+    draw_contour(polygons, contour_drawing.size(), poly_drawing);
 
     namedWindow( "Poly", WINDOW_AUTOSIZE );
     imshow( "Poly", poly_drawing );
