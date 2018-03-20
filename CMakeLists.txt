@@ -10,15 +10,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+include_directories(/usr/local/include)
+link_directories(/usr/local/lib)
 
-add_library(server STATIC src/server.cpp)
-target_include_directories(server PUBLIC src)
+add_executable(main src/main.cpp)
+
+target_link_libraries(main opencv_core opencv_imgproc opencv_imgcodecs opencv_calib3d opencv_features2d opencv_flann opencv_highgui opencv_ml opencv_objdetect opencv_photo opencv_stitching opencv_superres opencv_video opencv_videostab)
+
+target_include_directories(main PUBLIC src)
 
 
 include(Testing)
 include(AddTests)
-
-add_tests(server
-  DIRECTORY test
-  TEST_CASES
-  server_test.cpp)
