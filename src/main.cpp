@@ -19,32 +19,28 @@ int main( int, char** argv )
         cerr << "No image supplied ..." << endl;
         return -1;
     }
+
     cvtColor( src, src_gray, COLOR_BGR2GRAY );
     blur( src_gray, src_gray, Size(3,3) );
-
-    const char* gray_window = "Gray";
-    namedWindow( gray_window, WINDOW_AUTOSIZE );
-    imshow( gray_window, src_gray );
-
-    threshold(src_gray, src_gray, 150, 255, THRESH_BINARY);
 
     const char* source_window = "Source";
     namedWindow( source_window, WINDOW_AUTOSIZE );
     imshow( source_window, src_gray );
     createTrackbar( " Canny thresh:", "Source", &thresh, max_thresh, thresh_callback );
+
     thresh_callback( 0, 0 );
+
     waitKey(0);
     return(0);
 }
 void thresh_callback(int, void* )
 {
-    Mat canny_output;
+    Mat img_threshold;
     vector<vector<Point> > contours;
     vector<Vec4i> hierarchy;
-//    Canny( src_gray, canny_output, thresh, thresh*2, 3 );
-    canny_output = src_gray;
-    findContours( canny_output, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE, Point(0, 0) );
-    Mat drawing = Mat::zeros( canny_output.size(), CV_8UC3 );
+    threshold(src_gray, img_threshold, thresh, 255, THRESH_BINARY);
+    findContours( img_threshold, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE, Point(0, 0) );
+    Mat drawing = Mat::zeros( img_threshold.size(), CV_8UC3 );
     for( size_t i = 0; i< contours.size(); i++ )
     {
         Scalar color = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
