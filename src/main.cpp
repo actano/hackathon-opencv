@@ -10,6 +10,9 @@ using namespace std;
 typedef struct _arrow {
     Point start;
     Point end;
+    vector<Point> rough_contour;
+    vector<Point> near_p1;
+    vector<Point> near_p2;
 } arrow;
 
 RNG rng(12345);
@@ -114,11 +117,17 @@ vector<arrowData> get_arrows(const vector<vector<Point>> &contours) {
 }
 
 int norm(Point p) {
-    return (p.x)^2 + (p.y)^2;
+    return p.x * p.x + p.y * p.y;
 }
 
 int dist(Point p1, Point p2) {
     return norm(p1 - p2);
+}
+
+double area(InputArray points) {
+    vector<Point> tmp;
+    convexHull(points, tmp);
+    return contourArea(tmp);
 }
 
 arrow approximate_arrow(const arrowData &data) {
@@ -126,22 +135,25 @@ arrow approximate_arrow(const arrowData &data) {
     Point p1 = data.lineSegment[0];
     Point p2 = data.lineSegment[1];
 
-    int near_p1 = 0;
-    int near_p2 = 0;
+    vector<Point> poly;
+    approxPolyDP(data.contour, poly, 10, true);
+
+    vector<Point> near_p1;
+    vector<Point> near_p2;
 
     for(const Point& q: data.contour) {
         if (dist(p1, q) < dist(p2, q)) {
-            near_p1++;
+            near_p1.push_back(q);
         }
         else {
-            near_p2++;
+            near_p2.push_back(q);
         }
     }
 
-    if(near_p2 > near_p1) {
-        return {p1, p2};
+    if(near_p2.size() > near_p1.size()) {
+        return {p1, p2, poly, near_p1, near_p2};
     }
-    return {p2, p1};
+    return {p2, p1, poly, near_p1, near_p2};
 }
 
 void printC(const vector<Point> &contour) {
@@ -199,8 +211,8 @@ int main( int, char** argv )
     namedWindow( "Contour", WINDOW_AUTOSIZE );
     imshow( "Contour", contour_drawing );
 
-    printContour(boxes);
-    printArrows(arrows);
+  //  printContour(boxes);
+  //  printArrows(arrowDataVector);
 
     waitKey(0);
     return(0);
@@ -220,6 +232,11 @@ void draw_arrow_heads(const vector<arrow> &arrows, Size size, InputOutputArray c
    for (const arrow& arrow: arrows)
        {
            Scalar color = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
+           vector<vector<Point>> contours;
+          // contours.push_back(arrow.rough_contour);
+           contours.push_back(arrow.near_p1);
+           contours.push_back(arrow.near_p2);
+           drawContours(canvas, contours, -1, color, 2, 8);
            circle(canvas, arrow.end, 5, color, 3, 0, 0);
        }
 }
