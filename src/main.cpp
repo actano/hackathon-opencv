@@ -10,9 +10,6 @@ using namespace std;
 typedef struct _arrow {
     Point start;
     Point end;
-    vector<Point> rough_contour;
-    vector<Point> near_p1;
-    vector<Point> near_p2;
 } arrow;
 
 RNG rng(12345);
@@ -141,7 +138,7 @@ arrow approximate_arrow(const arrowData &data) {
     vector<Point> near_p1;
     vector<Point> near_p2;
 
-    for(const Point& q: data.contour) {
+    for(const Point& q: poly) {
         if (dist(p1, q) < dist(p2, q)) {
             near_p1.push_back(q);
         }
@@ -151,9 +148,9 @@ arrow approximate_arrow(const arrowData &data) {
     }
 
     if(near_p2.size() > near_p1.size()) {
-        return {p1, p2, poly, near_p1, near_p2};
+        return {p1, p2};
     }
-    return {p2, p1, poly, near_p1, near_p2};
+    return {p2, p1};
 }
 
 void printC(const vector<Point> &contour) {
@@ -232,11 +229,6 @@ void draw_arrow_heads(const vector<arrow> &arrows, Size size, InputOutputArray c
    for (const arrow& arrow: arrows)
        {
            Scalar color = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
-           vector<vector<Point>> contours;
-          // contours.push_back(arrow.rough_contour);
-           contours.push_back(arrow.near_p1);
-           contours.push_back(arrow.near_p2);
-           drawContours(canvas, contours, -1, color, 2, 8);
            circle(canvas, arrow.end, 5, color, 3, 0, 0);
        }
 }
