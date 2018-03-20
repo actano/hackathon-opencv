@@ -9,6 +9,7 @@ using namespace std;
 
 RNG rng(12345);
 vector<vector<Point>> recognise_shape(InputArray in, OutputArray drawing);
+void draw_contour(const vector<vector<Point>> &contours, Size size, OutputArray out);
 
 void preprocess(InputArray in, OutputArray out) {
     const int thresh = 150;
@@ -39,15 +40,23 @@ int main( int, char** argv )
     namedWindow( "Drawing", WINDOW_AUTOSIZE );
     imshow( "Drawing", drawing );
 
+    vector<vector<Point>> polygons;
     for(const vector<Point>& contour: contours) {
         cout<<"Begin Poly"<<endl;
         vector<Point> poly;
         approxPolyDP(contour, poly, 50, true);
+        polygons.push_back(poly);
         for(const Point& point: poly) {
             cout<<point<<endl;
         }
         cout<<"End Poly"<<endl;
     }
+
+    Mat poly_drawing;
+    draw_contour(polygons, drawing.size(), poly_drawing);
+
+    namedWindow( "Poly", WINDOW_AUTOSIZE );
+    imshow( "Poly", poly_drawing );
 
     waitKey(0);
     return(0);
