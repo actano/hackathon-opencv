@@ -7,9 +7,15 @@
 using namespace cv;
 using namespace std;
 
+typedef struct _arrow {
+    Point start;
+    Point end;
+} arrow;
+
 RNG rng(12345);
 vector<vector<Point>> recognise_shape(InputArray in, OutputArray drawing);
 void draw_contour(const vector<vector<Point>> &contours, Size size, OutputArray out);
+void draw_arrow_heads(const vector<arrow> &arrows, Size size, InputOutputArray canvas);
 
 void preprocess(InputArray in, OutputArray out) {
     const int thresh = 150;
@@ -107,11 +113,6 @@ vector<arrowData> get_arrows(const vector<vector<Point>> &contours) {
     return result;
 }
 
-typedef struct _arrow {
-    Point start;
-    Point end;
-} arrow;
-
 int norm(Point p) {
     return (p.x)^2 + (p.y)^2;
 }
@@ -184,11 +185,19 @@ int main( int, char** argv )
 
     Mat contour_drawing;
     vector<vector<Point>> contours = recognise_shape(preprocessed, contour_drawing);
-    namedWindow( "Contour", WINDOW_AUTOSIZE );
-    imshow( "Contour", contour_drawing );
 
     vector<vector<Point>> boxes = get_boxes(contours);
-    vector<arrowData> arrows = get_arrows(contours);
+    vector<arrowData> arrowDataVector = get_arrows(contours);
+    vector<arrow> arrows;
+
+    for(const arrowData& elm: arrowDataVector) {
+        arrows.push_back(approximate_arrow(elm));
+    }
+
+    draw_arrow_heads(arrows, contour_drawing.size(), contour_drawing);
+
+    namedWindow( "Contour", WINDOW_AUTOSIZE );
+    imshow( "Contour", contour_drawing );
 
     printContour(boxes);
     printArrows(arrows);
@@ -205,6 +214,14 @@ void draw_contour(const vector<vector<Point>> &contours, Size size, OutputArray 
         drawContours( drawing, contours, (int)i, color, 2, 8);
     }
     out.assign(drawing);
+}
+
+void draw_arrow_heads(const vector<arrow> &arrows, Size size, InputOutputArray canvas) {
+   for (const arrow& arrow: arrows)
+       {
+           Scalar color = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
+           circle(canvas, arrow.end, 5, color, 3, 0, 0);
+       }
 }
 
 vector<vector<Point>> recognise_shape(InputArray in, OutputArray out)
