@@ -34,10 +34,18 @@ int main( int, char** argv )
     imshow( source_window, preprocessed );
 
     Mat drawing;
-    vector<vector<Point>> shape = recognise_shape(preprocessed, drawing);
+    vector<vector<Point>> contours = recognise_shape(preprocessed, drawing);
 
     namedWindow( "Drawing", WINDOW_AUTOSIZE );
     imshow( "Drawing", drawing );
+
+    for(const vector<Point>& contour: contours) {
+        cout<<"Begin Contour"<<endl;
+        for(const Point& point: contour) {
+            cout<<point<<endl;
+        }
+        cout<<"End Contour"<<endl;
+    }
 
     waitKey(0);
     return(0);
