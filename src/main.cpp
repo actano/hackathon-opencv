@@ -93,13 +93,17 @@ typedef struct _arrowData {
 vector<arrowData> get_arrows(const vector<vector<Point>> &contours) {
     vector<arrowData> result;
 
-    arrowData arrow1;
-    arrow1.lineSegment.push_back(Point(350, 150));
-    arrow1.lineSegment.push_back(Point(350, 150));
+    for(const vector<Point>& contour: contours) {
+        vector<Point> poly;
+        approxPolyDP(contour, poly, 50, true);
+        if (poly.size() == 2) {
+            arrowData arrowD;
+            arrowD.lineSegment = poly;
+            arrowD.contour = contour;
+            result.push_back(arrowD);
+        }
+    }
 
-    arrow1.contour.push_back(Point(350, 150));
-
-    result.push_back(arrow1);
     return result;
 }
 
@@ -139,13 +143,26 @@ arrow approximate_arrow(const arrowData &data) {
     return {p2, p1};
 }
 
+void printC(const vector<Point> &contour) {
+    cout<<"begin contour"<<endl;
+    for(const Point& point: contour) {
+        cout<<point<< endl;
+    }
+    cout<<"end contour"<<endl;
+}
+
 void printContour(const vector<vector<Point>>& contours) {
     for(const vector<Point>& contour: contours) {
-        cout<<"begin contour"<<endl;
-        for(const Point& point: contour) {
-            cout<<point<< endl;
-        }
-        cout<<"end contour"<<endl;
+        printC(contour);
+    }
+}
+
+void printArrows(const vector<arrowData>& arrows) {
+    for(const arrowData &arrow: arrows) {
+        cout<<"begin arrow"<<endl;
+        printC(arrow.lineSegment);
+        printC(arrow.contour);
+        cout<<"end arrow"<<endl;
     }
 }
 
@@ -170,10 +187,11 @@ int main( int, char** argv )
     namedWindow( "Contour", WINDOW_AUTOSIZE );
     imshow( "Contour", contour_drawing );
 
-
     vector<vector<Point>> boxes = get_boxes(contours);
+    vector<arrowData> arrows = get_arrows(contours);
 
     printContour(boxes);
+    printArrows(arrows);
 
     waitKey(0);
     return(0);
